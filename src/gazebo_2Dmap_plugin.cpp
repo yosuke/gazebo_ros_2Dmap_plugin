@@ -22,7 +22,6 @@
 
 #include <gazebo/common/Time.hh>
 #include <gazebo/common/CommonTypes.hh>
-#include <gazebo/math/Vector3.hh>
 
 namespace gazebo {
 
@@ -172,7 +171,7 @@ bool OccupancyMapFromWorld::ServiceCallback(std_srvs::Empty::Request& req,
   return true;
 }
 
-bool OccupancyMapFromWorld::worldCellIntersection(const math::Vector3& cell_center,
+bool OccupancyMapFromWorld::worldCellIntersection(const Vector3& cell_center,
                                                   const double cell_length,
                                                   gazebo::physics::RayShapePtr ray)
 {
@@ -187,6 +186,16 @@ bool OccupancyMapFromWorld::worldCellIntersection(const math::Vector3& cell_cent
   int cell_length_steps = 10;
   double side_length;
 
+#if GAZEBO_MAJOR_VERSION >= 8
+  double x = cell_center.X();
+  double y = cell_center.Y();
+  double z = cell_center.Z();
+#else
+  double x = cell_center.x;
+  double y = cell_center.y;
+  double z = cell_center.z;
+#endif
+
   //check for collisions with beams at increasing sizes to capture smaller
   //objects inside the cell
   for(int step=1; step<=cell_length_steps; step++)
@@ -195,21 +204,21 @@ bool OccupancyMapFromWorld::worldCellIntersection(const math::Vector3& cell_cent
 
     for(int i=-1; i<2; i+=2)
     {
-      double start_x = cell_center.x + i * side_length/2;
-      double start_y = cell_center.y - i * side_length/2;
+      double start_x = x + i * side_length/2;
+      double start_y = y - i * side_length/2;
 
       for(int j=-1; j<2; j+=2)
       {
-        double end_x = cell_center.x + j * side_length/2;
-        double end_y = cell_center.y + j * side_length/2;
+        double end_x = x + j * side_length/2;
+        double end_y = y + j * side_length/2;
 
         //      std::cout << "start_x" << start_x << std::endl;
         //      std::cout << "start_y" << start_y << std::endl;
         //      std::cout << "end_x" << end_x << std::endl;
         //      std::cout << "end_y" << end_y << std::endl;
 
-        ray->SetPoints(math::Vector3(start_x, start_y, cell_center.z),
-                       math::Vector3(end_x, end_y, cell_center.z));
+        ray->SetPoints(Vector3(start_x, start_y, z),
+                       Vector3(end_x, end_y, z));
         ray->GetIntersection(dist, entity_name);
 
         if(!entity_name.empty())
@@ -274,7 +283,7 @@ bool OccupancyMapFromWorld::index2cell(int index, unsigned int cell_size_x,
 void OccupancyMapFromWorld::CreateOccupancyMap()
 {
   //TODO map origin different from (0,0)
-  math::Vector3 map_origin(0,0,map_height_);
+  Vector3 map_origin(0,0,map_height_);
 
   unsigned int cells_size_x = map_size_x_ / map_resolution_;
   unsigned int cells_size_y = map_size_y_ / map_resolution_;
@@ -289,12 +298,22 @@ void OccupancyMapFromWorld::CreateOccupancyMap()
   occupancy_map_->info.resolution = map_resolution_;
   occupancy_map_->info.width = cells_size_x;
   occupancy_map_->info.height = cells_size_y;
+#if GAZEBO_MAJOR_VERSION >= 8
+  occupancy_map_->info.origin.position.x = map_origin.X() - map_size_x_ / 2;
+  occupancy_map_->info.origin.position.y = map_origin.Y() - map_size_y_ / 2;
+  occupancy_map_->info.origin.position.z = map_origin.Z();
+#else
   occupancy_map_->info.origin.position.x = map_origin.x - map_size_x_ / 2;
   occupancy_map_->info.origin.position.y = map_origin.y - map_size_y_ / 2;
   occupancy_map_->info.origin.position.z = map_origin.z;
+#endif
   occupancy_map_->info.origin.orientation.w = 1;
 
+#if GAZEBO_MAJOR_VERSION >= 8
+  gazebo::physics::PhysicsEnginePtr engine = world_->Physics();
+#else
   gazebo::physics::PhysicsEnginePtr engine = world_->GetPhysicsEngine();
+#endif
   engine->InitForThread();
   gazebo::physics::RayShapePtr ray =
       boost::dynamic_pointer_cast<gazebo::physics::RayShape>(
@@ -353,7 +372,7 @@ void OccupancyMapFromWorld::CreateOccupancyMap()
             cell2world(cell_x + i, cell_y + j, map_size_x_, map_size_y_, map_resolution_,
                        world_x, world_y);
 
-            bool cell_occupied = worldCellIntersection(math::Vector3(world_x, world_y, map_height_),
+            bool cell_occupied = worldCellIntersection(Vector3(world_x, world_y, map_height_),
                                                        map_resolution_, ray);
 
             if(cell_occupied)

@@ -35,6 +35,13 @@
 #include <std_srvs/Empty.h>
 #include <costmap_2d/costmap_2d_ros.h>
 #include <std_srvs/Empty.h>
+#if GAZEBO_MAJOR_VERSION >= 9
+#include <ignition/math/Vector3.hh>
+typedef ignition::math::Vector3d Vector3;
+#else
+#include <gazebo/math/Vector3.hh>
+typedef gazebo::math::Vector3 Vector3;
+#endif
 
 namespace gazebo {
 
@@ -59,7 +66,7 @@ class OccupancyMapFromWorld : public WorldPlugin {
   /// \param[in] _sdf SDF element that describes the plugin.
   void Load(physics::WorldPtr _parent, sdf::ElementPtr _sdf);
 
-  bool worldCellIntersection(const math::Vector3& cell_center, const double cell_length,
+  bool worldCellIntersection(const Vector3& cell_center, const double cell_length,
                              gazebo::physics::RayShapePtr ray);
 
 //  void FloodFill(const math::Vector3& seed_point,
